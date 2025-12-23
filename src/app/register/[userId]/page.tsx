@@ -144,8 +144,8 @@ function OtpLoginContent({ params }: { params: { userId: string } }) {
       const result = await verifyOtp(data.otp, userId);
       if (result.success && result.userId) {
         toast({
-          title: 'Login Successful',
-          description: 'You are now being redirected...',
+          title: 'OTP verified successfully',
+          description: 'You are now being redirected to the next step...',
         });
         router.push(`/shift-selection?userId=${result.userId}`);
       } else {
