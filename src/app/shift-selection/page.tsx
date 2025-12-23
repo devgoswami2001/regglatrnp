@@ -199,6 +199,10 @@ function ShiftAndStoppageSelectionContent() {
   const handleShiftSelection = (shiftId: number) => {
     setSelectedShiftId(shiftId);
   };
+  
+  const handleStoppageSelection = (stoppageId: number) => {
+    setSelectedStoppageId(stoppageId);
+  };
 
   if (loading || !user) {
     return (
@@ -293,7 +297,7 @@ function ShiftAndStoppageSelectionContent() {
               <ScrollArea className="h-72 w-full rounded-md border">
                 <RadioGroup
                   onValueChange={(value) =>
-                    setSelectedStoppageId(parseInt(value))
+                    handleStoppageSelection(parseInt(value))
                   }
                   value={selectedStoppageId?.toString()}
                   className="p-4"

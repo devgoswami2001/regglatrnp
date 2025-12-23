@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import type { FetchedUser } from '@/lib/types';
-import { CheckCircle, User, Clock, MapPin } from 'lucide-react';
+import { CheckCircle, User, Clock, MapPin, Loader2 } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { Stoppage } from '@/lib/types';
 
@@ -24,6 +24,7 @@ interface ConfirmationPageProps {
 
 // These functions will be replaced by API calls in a real application
 const findUserById = async (id: string): Promise<FetchedUser | null> => {
+  if (!id) return null;
   try {
     const response = await fetch('https://glatrnp.in/transport/metadata/', {
       method: 'POST',
@@ -41,6 +42,7 @@ const findUserById = async (id: string): Promise<FetchedUser | null> => {
 };
 
 const getStoppageById = async (stoppageId: string, userId: string): Promise<Stoppage | undefined> => {
+  if (!stoppageId || !userId) return undefined;
   try {
      const response = await fetch('https://glatrnp.in/transport/metadata/', {
       method: 'POST',
@@ -69,7 +71,26 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
   const stoppage = await getStoppageById(stoppageId, userId);
 
   if (!user) {
-    redirect('/');
+     // Don't redirect immediately. Show a loading or error state.
+    // If it's a persistent problem, the user can manually go home.
+    return (
+    <RegistrationLayout>
+      <Card>
+        <CardHeader className="items-center text-center">
+          <Loader2 className="mb-4 h-16 w-16 animate-spin text-primary" />
+          <CardTitle className="text-2xl">Loading Details...</CardTitle>
+          <CardDescription>
+            There was a problem fetching your details. Please try again later.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+           <Button asChild className="w-full">
+            <Link href="/">Back to Home</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    </RegistrationLayout>
+    )
   }
 
   return (
