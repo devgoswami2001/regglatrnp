@@ -116,10 +116,6 @@ function ShiftAndStoppageSelectionContent() {
     if (!selectedShiftId || !selectedStoppageId || !userId) return;
 
     setIsSubmitting(true);
-    toast({
-      title: 'Submission In Progress',
-      description: 'Submitting your selection...',
-    });
 
     const result = await submitSelection(userId, selectedShiftId, selectedStoppageId);
 
