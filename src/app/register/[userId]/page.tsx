@@ -41,15 +41,27 @@ const API_BASE_URL = 'https://glatrnp.in/transport/registration';
 const verifyOtp = async (
   otp: string,
   userId: string
-): Promise<{ success: boolean; userId?: string }> => {
-  console.log(`Verifying OTP ${otp} for user ${userId}`);
-  // This is a placeholder for the actual API call to verify the OTP
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  if (otp === '123456') {
-    return { success: true, userId: userId };
+): Promise<{ success: boolean; userId?: string; error?: string }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/${userId}/verify-otp/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ otp }),
+    });
+
+    if (response.ok) {
+      return { success: true, userId: userId };
+    } else {
+      const errorData = await response.json();
+      return { success: false, error: errorData.error || 'Verification failed.' };
+    }
+  } catch (error) {
+    return { success: false, error: 'An unexpected error occurred.' };
   }
-  return { success: false };
 };
+
 
 function OtpLoginContent({ params }: { params: { userId: string } }) {
   const [isSending, setIsSending] = useState(true);
@@ -129,7 +141,6 @@ function OtpLoginContent({ params }: { params: { userId: string } }) {
     if (!userId) return;
     setIsVerifying(true);
     try {
-      // TODO: Replace with actual OTP verification API call
       const result = await verifyOtp(data.otp, userId);
       if (result.success && result.userId) {
         toast({
@@ -138,11 +149,12 @@ function OtpLoginContent({ params }: { params: { userId: string } }) {
         });
         router.push(`/shift-selection?userId=${result.userId}`);
       } else {
-        otpForm.setError('otp', { message: 'The OTP you entered is invalid or has expired.' });
+        const errorMessage = result.error || 'The OTP you entered is invalid or has expired.';
+        otpForm.setError('otp', { message: errorMessage });
         toast({
           variant: 'destructive',
           title: 'Verification Failed',
-          description: 'The OTP you entered is incorrect. Please try again.',
+          description: errorMessage,
         });
       }
     } catch (error) {
