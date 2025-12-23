@@ -132,7 +132,7 @@ function ShiftAndStoppageSelectionContent() {
       });
       const selectedShift = shifts.find(s => s.id === selectedShiftId);
       router.push(
-        `/confirmation?userId=${userId}&shift=${selectedShift?.time}&stoppageId=${selectedStoppageId}`
+        `/confirmation?userId=${userId}&shift=${encodeURIComponent(selectedShift?.time || '')}&stoppageId=${selectedStoppageId}`
       );
     } else {
       toast({
