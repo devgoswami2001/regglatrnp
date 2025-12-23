@@ -30,7 +30,7 @@ export function StepIndicator() {
   if (activeStepIndex === -1) return null;
 
   return (
-    <div className="w-full max-w-md">
+    <div className="w-full max-w-md flex justify-center">
       <div className="flex items-start">
         {steps.map((step, index) => (
           <div key={step.name} className="flex w-full items-center">
