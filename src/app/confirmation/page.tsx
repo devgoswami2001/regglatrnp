@@ -8,10 +8,10 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { findUserById, getStoppageById } from '@/lib/data';
-import type { Shift } from '@/lib/types';
+import type { FetchedUser } from '@/lib/types';
 import { CheckCircle, User, Clock, MapPin } from 'lucide-react';
 import { redirect } from 'next/navigation';
+import { Stoppage } from '@/lib/types';
 
 interface ConfirmationPageProps {
   searchParams: {
@@ -21,15 +21,51 @@ interface ConfirmationPageProps {
   };
 }
 
-export default function ConfirmationPage({ searchParams }: ConfirmationPageProps) {
+// These functions will be replaced by API calls in a real application
+const findUserById = async (id: string): Promise<FetchedUser | null> => {
+  try {
+    const response = await fetch('https://glatrnp.in/transport/metadata/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ suggestion_id: id }),
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.staff;
+  } catch (error) {
+    return null;
+  }
+};
+
+const getStoppageById = async (stoppageId: string, userId: string): Promise<Stoppage | undefined> => {
+  try {
+     const response = await fetch('https://glatrnp.in/transport/metadata/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ suggestion_id: userId }),
+    });
+    if (!response.ok) return undefined;
+    const data = await response.json();
+    return data.locations.find((s: Stoppage) => s.id.toString() === stoppageId);
+  } catch (error) {
+    return undefined;
+  }
+ 
+};
+
+export default async function ConfirmationPage({ searchParams }: ConfirmationPageProps) {
   const { userId, shift, stoppageId } = searchParams;
 
   if (!userId || !shift || !stoppageId) {
     redirect('/');
   }
 
-  const user = findUserById(userId);
-  const stoppage = getStoppageById(stoppageId);
+  const user = await findUserById(userId);
+  const stoppage = await getStoppageById(stoppageId, userId);
 
   if (!user) {
     redirect('/');
@@ -55,7 +91,7 @@ export default function ConfirmationPage({ searchParams }: ConfirmationPageProps
                 <User className="h-5 w-5 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Name</p>
-                  <p className="font-medium">{user.name}</p>
+                  <p className="font-medium">{user.first_name} {user.last_name}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">

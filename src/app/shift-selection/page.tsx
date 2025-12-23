@@ -13,8 +13,7 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { RegistrationLayout } from '@/components/RegistrationLayout';
-import { findUserById } from '@/lib/data';
-import type { User, Shift, Stoppage } from '@/lib/types';
+import type { FetchedUser, Shift, Stoppage } from '@/lib/types';
 import {
   Clock,
   User as UserIcon,
@@ -22,7 +21,6 @@ import {
   Hash,
   Loader2,
   MapPin,
-  BusFront,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ShiftSuggestion from '@/components/ShiftSuggestion';
@@ -33,16 +31,17 @@ import { useToast } from '@/hooks/use-toast';
 
 const API_BASE_URL = 'https://glatrnp.in/transport';
 
-async function getMetadata(userId: string): Promise<{ shifts: Shift[], locations: Stoppage[] }> {
+async function getMetadata(userId: string): Promise<{ staff: FetchedUser, shifts: Shift[], locations: Stoppage[] }> {
   const response = await fetch(`${API_BASE_URL}/metadata/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ id: userId }),
+    body: JSON.stringify({ suggestion_id: userId }),
   });
   if (!response.ok) {
-    throw new Error('Failed to fetch metadata');
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to fetch metadata');
   }
   return response.json();
 }
@@ -53,7 +52,8 @@ function ShiftAndStoppageSelectionContent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<FetchedUser | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [stoppages, setStoppages] = useState<Stoppage[]>([]);
   const [selectedShiftId, setSelectedShiftId] = useState<number | null>(null);
@@ -62,30 +62,24 @@ function ShiftAndStoppageSelectionContent() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const userId = searchParams.get('userId');
-    if (!userId) {
+    const currentUserId = searchParams.get('userId');
+    if (!currentUserId) {
       toast({ variant: 'destructive', title: 'Error', description: 'User ID is missing.' });
       router.push('/');
       return;
     }
-
-    const foundUser = findUserById(userId);
-    if (!foundUser) {
-      toast({ variant: 'destructive', title: 'Error', description: 'User not found.' });
-      router.push('/');
-      return;
-    }
-    setUser(foundUser);
+    setUserId(currentUserId);
 
     const fetchMetadata = async () => {
       try {
         setLoading(true);
-        const { shifts: fetchedShifts, locations: fetchedStoppages } = await getMetadata(userId);
+        const { staff, shifts: fetchedShifts, locations: fetchedStoppages } = await getMetadata(currentUserId);
+        setUser(staff);
         setShifts(fetchedShifts);
         setStoppages(fetchedStoppages);
-      } catch (error) {
+      } catch (error: any) {
         console.error(error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not load shift and stoppage data.' });
+        toast({ variant: 'destructive', title: 'Error', description: error.message || 'Could not load shift and stoppage data.' });
       } finally {
         setLoading(false);
       }
@@ -95,15 +89,13 @@ function ShiftAndStoppageSelectionContent() {
   }, [searchParams, router, toast]);
 
   const handleContinue = () => {
-    if (selectedShiftId && selectedStoppageId && user) {
-       // TODO: Implement submission logic here
+    if (selectedShiftId && selectedStoppageId && userId) {
       toast({
         title: 'Submission In Progress',
         description: 'Submitting your selection...',
       });
-      // For now, let's just log it and move to a placeholder confirmation
       console.log({
-        userId: user.id,
+        userId: userId,
         shiftId: selectedShiftId,
         stoppageId: selectedStoppageId,
       });
@@ -111,18 +103,17 @@ function ShiftAndStoppageSelectionContent() {
       const selectedShift = shifts.find(s => s.id === selectedShiftId);
       
        router.push(
-         `/confirmation?userId=${user.id}&shift=${selectedShift?.time}&stoppageId=${selectedStoppageId}`
+         `/confirmation?userId=${userId}&shift=${selectedShift?.time}&stoppageId=${selectedStoppageId}`
        );
     }
   };
 
   const handleShiftSelection = (shiftId: number) => {
     setSelectedShiftId(shiftId);
-    // In the new API, stoppages are not dependent on shifts, so no need to filter.
   }
   
   const handleSuggestion = (suggestion: string) => {
-    const matchedShift = shifts.find(s => s.time.includes(suggestion));
+    const matchedShift = shifts.find(s => s.time.toLowerCase().includes(suggestion.toLowerCase()));
     if (matchedShift) {
         setSelectedShiftId(matchedShift.id);
     }
@@ -156,14 +147,14 @@ function ShiftAndStoppageSelectionContent() {
               <div className="flex items-center gap-2">
                 <UserIcon className="h-5 w-5 text-muted-foreground" />
                 <span>
-                  <span className="font-medium">Name:</span> {user.name}
+                  <span className="font-medium">Name:</span> {user.first_name} {user.last_name}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <Hash className="h-5 w-5 text-muted-foreground" />
                 <span>
                   <span className="font-medium">Employee ID:</span>{' '}
-                  {user.enrollmentId}
+                  {user.employee_id}
                 </span>
               </div>
               <div className="col-span-1 flex items-center gap-2 md:col-span-2">
@@ -180,9 +171,9 @@ function ShiftAndStoppageSelectionContent() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold">1. Select Your Shift</h3>
-              {user.enrollmentId && (
+              {user.employee_id && (
                 <ShiftSuggestion
-                  employeeId={user.enrollmentId}
+                  employeeId={user.employee_id}
                   onSuggestion={handleSuggestion}
                 />
               )}
