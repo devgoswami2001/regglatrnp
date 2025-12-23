@@ -13,8 +13,8 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { RegistrationLayout } from '@/components/RegistrationLayout';
-import { findUserById } from '@/lib/data';
-import type { User, Shift } from '@/lib/types';
+import { findUserById, getStoppagesByShift } from '@/lib/data';
+import type { User, Shift, Stoppage } from '@/lib/types';
 import { shifts } from '@/lib/types';
 import {
   Clock,
@@ -22,37 +22,55 @@ import {
   Building,
   Hash,
   Loader2,
+  MapPin,
+  BusFront,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ShiftSuggestion from '@/components/ShiftSuggestion';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
-function ShiftSelectionContent() {
+function ShiftAndStoppageSelectionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
+  const [stoppages, setStoppages] = useState<Stoppage[]>([]);
+  const [selectedStoppageId, setSelectedStoppageId] = useState<string | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const userId = searchParams.get('userId');
     if (userId) {
-      // In a real app, you'd fetch this from your backend
       const foundUser = findUserById(userId);
       if (foundUser) {
         setUser(foundUser);
       } else {
-        router.push('/'); // User not found, redirect to login
+        router.push('/');
       }
     } else {
-      router.push('/'); // No userId, redirect to login
+      router.push('/');
     }
     setLoading(false);
   }, [searchParams, router]);
 
+  useEffect(() => {
+    if (selectedShift) {
+      const availableStoppages = getStoppagesByShift(selectedShift);
+      setStoppages(availableStoppages);
+      setSelectedStoppageId(null); // Reset stoppage selection when shift changes
+    } else {
+      setStoppages([]);
+    }
+  }, [selectedShift]);
+
   const handleContinue = () => {
-    if (selectedShift && user) {
+    if (selectedShift && selectedStoppageId && user) {
       router.push(
-        `/stoppage-selection?userId=${user.id}&shift=${selectedShift}`
+        `/confirmation?userId=${user.id}&shift=${selectedShift}&stoppageId=${selectedStoppageId}`
       );
     }
   };
@@ -71,12 +89,13 @@ function ShiftSelectionContent() {
     <RegistrationLayout>
       <Card>
         <CardHeader>
-          <CardTitle>User Details & Shift Selection</CardTitle>
+          <CardTitle>Shift & Stoppage Selection</CardTitle>
           <CardDescription>
-            Confirm your details and select your preferred shift.
+            Confirm your details, then select your shift and stoppage.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
+          {/* User Details */}
           <div className="space-y-4 rounded-lg border p-4">
             <h3 className="font-semibold">Your Details</h3>
             <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
@@ -103,9 +122,10 @@ function ShiftSelectionContent() {
             </div>
           </div>
 
+          {/* Shift Selection */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Select Your Shift</h3>
+              <h3 className="font-semibold">1. Select Your Shift</h3>
               {user.enrollmentId && (
                 <ShiftSuggestion
                   employeeId={user.enrollmentId}
@@ -114,7 +134,8 @@ function ShiftSelectionContent() {
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              Only one shift can be selected.
+              Only one shift can be selected. This will determine available
+              stoppages.
             </p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {shifts.map(shift => (
@@ -134,14 +155,65 @@ function ShiftSelectionContent() {
               ))}
             </div>
           </div>
+
+          {/* Stoppage Selection */}
+          {selectedShift && (
+            <div className="space-y-4">
+              <h3 className="font-semibold">2. Select Your Stoppage</h3>
+              <p className="text-sm text-muted-foreground">
+                Available stoppages for the{' '}
+                <span className="font-semibold text-primary">
+                  {selectedShift}
+                </span>{' '}
+                shift.
+              </p>
+              <ScrollArea className="h-72 w-full rounded-md border">
+                <RadioGroup
+                  onValueChange={setSelectedStoppageId}
+                  value={selectedStoppageId || ''}
+                  className="p-4"
+                >
+                  {stoppages.length > 0 ? (
+                    stoppages.map(stoppage => (
+                      <Label
+                        key={stoppage.id}
+                        htmlFor={stoppage.id}
+                        className={cn(
+                          'flex cursor-pointer items-center gap-4 rounded-md border p-4 transition-colors hover:bg-accent/50',
+                          selectedStoppageId === stoppage.id &&
+                            'border-primary bg-primary/10'
+                        )}
+                      >
+                        <RadioGroupItem value={stoppage.id} id={stoppage.id} />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 font-semibold">
+                            <MapPin className="h-4 w-4 text-primary" />
+                            {stoppage.name}
+                          </div>
+                          <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                            <BusFront className="h-3 w-3" />
+                            {stoppage.route}
+                          </div>
+                        </div>
+                      </Label>
+                    ))
+                  ) : (
+                    <div className="flex h-full items-center justify-center p-4 text-sm text-muted-foreground">
+                      No stoppages available for this shift.
+                    </div>
+                  )}
+                </RadioGroup>
+              </ScrollArea>
+            </div>
+          )}
         </CardContent>
         <CardFooter>
           <Button
             onClick={handleContinue}
-            disabled={!selectedShift}
+            disabled={!selectedStoppageId}
             className="ml-auto w-full md:w-auto"
           >
-            Continue
+            Confirm & Continue
           </Button>
         </CardFooter>
       </Card>
@@ -152,7 +224,7 @@ function ShiftSelectionContent() {
 export default function ShiftSelectionPage() {
   return (
     <Suspense>
-      <ShiftSelectionContent />
+      <ShiftAndStoppageSelectionContent />
     </Suspense>
   );
 }

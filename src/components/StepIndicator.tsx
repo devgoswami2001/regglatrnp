@@ -5,23 +5,43 @@ import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
 
 const steps = [
-  { path: '/', name: 'Login' },
-  { path: '/shift-selection', name: 'Details & Shift' },
-  { path: '/stoppage-selection', name: 'Route & Stoppage' },
+  { path: '/', name: 'OTP Verification' },
+  { path: '/shift-selection', name: 'Shift & Stoppage' },
   { path: '/confirmation', name: 'Confirmation' },
 ];
 
 export function StepIndicator() {
   const pathname = usePathname();
-  const currentStep = [...steps]
-    .reverse()
-    .find(step => pathname.startsWith(step.path));
-  const activeStepIndex = currentStep ? steps.indexOf(currentStep) : -1;
+  
+  // Find the index of the current step based on the path
+  let activeStepIndex = steps.findIndex(step => pathname.startsWith(step.path) && step.path !== '/');
+  if (pathname === '/') {
+    activeStepIndex = 0;
+  }
+  // For paths that might not be explicitly listed but belong to a step (like stoppage selection)
+  if (pathname.startsWith('/stoppage-selection')) {
+    activeStepIndex = 1;
+  }
+   if (pathname.startsWith('/confirmation')) {
+    activeStepIndex = 2;
+  }
+
+
+  if (activeStepIndex === -1 && pathname !== '/') {
+     const lastActiveStep = [...steps].reverse().find(step => pathname.startsWith(step.path));
+     if(lastActiveStep) {
+        activeStepIndex = steps.indexOf(lastActiveStep);
+     }
+  }
+  if (activeStepIndex === -1 && pathname === '/') {
+    activeStepIndex = 0;
+  }
+
 
   if (activeStepIndex === -1) return null;
 
   return (
-    <div className="mb-12">
+    <div className="mb-12 w-full max-w-2xl">
       <div className="flex items-start">
         {steps.map((step, index) => (
           <div key={step.name} className="flex w-full items-center">
@@ -44,7 +64,7 @@ export function StepIndicator() {
               </div>
               <p
                 className={cn(
-                  'mt-2 w-20 text-center text-xs md:text-sm',
+                  'mt-2 w-24 text-center text-xs md:text-sm',
                   index <= activeStepIndex
                     ? 'font-semibold text-foreground'
                     : 'text-muted-foreground'
