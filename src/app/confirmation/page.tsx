@@ -1,3 +1,4 @@
+
 import { RegistrationLayout } from '@/components/RegistrationLayout';
 import {
   Card,
@@ -75,16 +76,16 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
     <RegistrationLayout>
       <Card>
         <CardHeader className="items-center text-center">
-          <CheckCircle className="mb-4 h-16 w-16 text-green-500" />
-          <CardTitle className="text-2xl">Registration Complete!</CardTitle>
+          <CheckCircle className="mb-4 h-16 w-16 text-primary" />
+          <CardTitle className="text-2xl">Request Received!</CardTitle>
           <CardDescription>
-            Your transport registration has been completed successfully.
+            Your interest in availing the transport facility has been recorded.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-4 rounded-lg border bg-secondary/30 p-6">
             <h3 className="text-center text-lg font-semibold">
-              Your Registration Summary
+              Your Selection Summary
             </h3>
             <div className="space-y-3 text-foreground">
               <div className="flex items-center gap-3">
@@ -115,7 +116,7 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
             </div>
           </div>
           <div className="text-center text-sm text-muted-foreground">
-            <p>Thank you for using GLA TransportPass.</p>
+            <p>You will receive further steps over the email.</p>
             <p>For any assistance, please contact support.</p>
           </div>
           <Button asChild className="w-full">
@@ -126,3 +127,4 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
     </RegistrationLayout>
   );
 }
+
