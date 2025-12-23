@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -44,6 +44,7 @@ const sendOtp = async (
   console.log(`Sending OTP to ${email}`);
   await new Promise(resolve => setTimeout(resolve, 1000));
   const atIndex = email.indexOf('@');
+  if (atIndex < 1) return { success: false, maskedEmail: '' };
   const masked = `${email.substring(0, 1)}***${email.substring(atIndex)}`;
   return { success: true, maskedEmail: masked };
 };
@@ -78,7 +79,6 @@ function OtpLoginContent() {
   useEffect(() => {
     const id = searchParams.get('userId');
     if (!id) {
-      // Maybe show an error or redirect to a 'invalid link' page
       toast({
         variant: 'destructive',
         title: 'Invalid Link',
@@ -99,6 +99,33 @@ function OtpLoginContent() {
     }
   }, [searchParams, toast]);
 
+  const handleSendOtp = async (emailToSend: string) => {
+    setIsSending(true);
+    otpForm.reset();
+    try {
+      const result = await sendOtp(emailToSend);
+      if (result.success) {
+        setMaskedEmail(result.maskedEmail);
+        toast({
+          title: 'OTP Sent Successfully',
+          description: `A 6-digit code has been sent to ${result.maskedEmail}.`,
+        });
+        setCooldown(30);
+      } else {
+        throw new Error('Failed to send OTP.');
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error Sending OTP',
+        description:
+          'Could not send OTP. Please check the link and try again.',
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   useEffect(() => {
     if (email) {
       handleSendOtp(email);
@@ -116,52 +143,38 @@ function OtpLoginContent() {
     return () => clearInterval(interval);
   }, [cooldown]);
 
-  const handleSendOtp = async (emailToSend: string) => {
-    setIsSending(true);
-    const result = await sendOtp(emailToSend);
-    setIsSending(false);
-
-    if (result.success) {
-      setMaskedEmail(result.maskedEmail);
-      toast({
-        title: 'OTP Sent',
-        description: `A 6-digit OTP has been sent to ${result.maskedEmail}`,
-      });
-      setCooldown(30);
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description:
-          'Could not send OTP. Please check the email and try again.',
-      });
-    }
-  };
-
   const handleVerifyOtp = async (data: OtpFormValues) => {
     setIsVerifying(true);
-    const result = await verifyOtp(data.otp);
-    setIsVerifying(false);
-
-    if (result.success && result.userId) {
+    try {
+      const result = await verifyOtp(data.otp);
+      if (result.success && result.userId) {
+        toast({
+          title: 'Login Successful',
+          description: 'You are now being redirected...',
+        });
+        router.push(`/shift-selection?userId=${result.userId}`);
+      } else {
+        otpForm.setError('otp', { message: 'The OTP you entered is invalid or has expired.' });
+        toast({
+          variant: 'destructive',
+          title: 'Verification Failed',
+          description: 'The OTP you entered is incorrect. Please try again.',
+        });
+      }
+    } catch (error) {
       toast({
-        title: 'Success',
-        description: 'Login successful! Redirecting...',
-      });
-      router.push(`/shift-selection?userId=${result.userId}`);
-    } else {
-      otpForm.setError('otp', { message: 'Invalid or expired OTP.' });
-      toast({
-        variant: 'destructive',
-        title: 'Verification Failed',
-        description: 'The OTP you entered is incorrect.',
-      });
+          variant: 'destructive',
+          title: 'Verification Error',
+          description: 'An unexpected error occurred. Please try again later.',
+        });
+    } finally {
+      setIsVerifying(false);
     }
   };
 
-  const handleResend = async () => {
-    if (cooldown > 0 || !email) return;
-    await handleSendOtp(email);
+  const handleResend = () => {
+    if (cooldown > 0 || isSending || !email) return;
+    handleSendOtp(email);
   };
   
   if (!userId) {
@@ -171,7 +184,7 @@ function OtpLoginContent() {
            <CardHeader>
              <CardTitle>Secure Login</CardTitle>
              <CardDescription>
-               Please use the unique login link sent to you.
+               Please use the unique login link sent to you to begin the process.
              </CardDescription>
            </CardHeader>
          </Card>
@@ -184,8 +197,9 @@ function OtpLoginContent() {
       <RegistrationLayout>
         <Card>
           <CardContent className="flex flex-col items-center justify-center p-12">
-            <Loader2 className="mb-4 h-8 w-8 animate-spin" />
+            <Loader2 className="mb-4 h-8 w-8 animate-spin text-primary" />
             <p className="text-muted-foreground">Preparing your secure login...</p>
+            <p className="mt-2 text-xs text-muted-foreground">Sending OTP to your registered email.</p>
           </CardContent>
         </Card>
       </RegistrationLayout>
@@ -194,11 +208,11 @@ function OtpLoginContent() {
 
   return (
     <RegistrationLayout>
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Enter Your OTP</CardTitle>
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle>Secure Email Verification</CardTitle>
           <CardDescription>
-            {`A 6-digit OTP has been sent to ${maskedEmail}.`}
+            {`Enter the 6-digit one-time password (OTP) sent to ${maskedEmail}.`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -212,7 +226,7 @@ function OtpLoginContent() {
                 name="otp"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>6-Digit OTP</FormLabel>
+                    <FormLabel className="sr-only">6-Digit OTP</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <KeyRound className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
@@ -221,6 +235,7 @@ function OtpLoginContent() {
                           {...field}
                           className="pl-10 text-center text-2xl tracking-[0.5em] font-mono"
                           maxLength={6}
+                          autoFocus
                         />
                       </div>
                     </FormControl>
@@ -231,16 +246,17 @@ function OtpLoginContent() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={isVerifying}
+                disabled={isVerifying || isSending}
               >
-                {isVerifying && (
+                {isVerifying ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Verify & Proceed
+                ) : null}
+                Verify & Continue
               </Button>
-              <div className="text-center text-sm">
+              <div className="text-center text-sm text-muted-foreground">
+                <p>OTP is valid for 5 minutes. Do not refresh the page.</p>
                 {cooldown > 0 ? (
-                  <p className="text-muted-foreground">
+                  <p className="mt-2">
                     Resend OTP in {cooldown}s
                   </p>
                 ) : (
@@ -248,10 +264,10 @@ function OtpLoginContent() {
                     variant="link"
                     type="button"
                     onClick={handleResend}
-                    className="h-auto p-0"
-                    disabled={isSending}
+                    className="mt-1 h-auto p-0"
+                    disabled={isSending || isVerifying}
                   >
-                    Didn't receive the code? Resend OTP
+                    Didn't receive the code? Resend
                   </Button>
                 )}
               </div>
