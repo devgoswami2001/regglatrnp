@@ -45,6 +45,30 @@ async function getMetadata(userId: string): Promise<{ staff: FetchedUser, shifts
   return response.json();
 }
 
+async function submitSelection(userId: string, shiftId: number, locationId: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/registration/${userId}/submit/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ shift: shiftId, location: locationId }),
+    });
+
+    if (response.ok) {
+      return { success: true };
+    } else {
+      const errorData = await response.json();
+      // Handle cases where the error message is nested (e.g., under 'shift')
+      const errorMessage = typeof errorData.error === 'string' 
+        ? errorData.error 
+        : (errorData.shift && Array.isArray(errorData.shift) && errorData.shift[0]) || 'An unknown error occurred.';
+      return { success: false, error: errorMessage };
+    }
+  } catch (error) {
+    return { success: false, error: 'An unexpected error occurred during submission.' };
+  }
+}
 
 function ShiftAndStoppageSelectionContent() {
   const router = useRouter();
@@ -59,6 +83,7 @@ function ShiftAndStoppageSelectionContent() {
   const [selectedStoppageId, setSelectedStoppageId] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const currentUserId = searchParams.get('userId');
@@ -87,23 +112,34 @@ function ShiftAndStoppageSelectionContent() {
     fetchMetadata();
   }, [searchParams, router, toast]);
 
-  const handleContinue = () => {
-    if (selectedShiftId && selectedStoppageId && userId) {
-      toast({
-        title: 'Submission In Progress',
-        description: 'Submitting your selection...',
-      });
-      console.log({
-        userId: userId,
-        shiftId: selectedShiftId,
-        stoppageId: selectedStoppageId,
-      });
+  const handleContinue = async () => {
+    if (!selectedShiftId || !selectedStoppageId || !userId) return;
 
+    setIsSubmitting(true);
+    toast({
+      title: 'Submission In Progress',
+      description: 'Submitting your selection...',
+    });
+
+    const result = await submitSelection(userId, selectedShiftId, selectedStoppageId);
+
+    setIsSubmitting(false);
+
+    if (result.success) {
+      toast({
+        title: 'Success!',
+        description: 'Your selection has been submitted successfully.',
+      });
       const selectedShift = shifts.find(s => s.id === selectedShiftId);
-      
-       router.push(
-         `/confirmation?userId=${userId}&shift=${selectedShift?.time}&stoppageId=${selectedStoppageId}`
-       );
+      router.push(
+        `/confirmation?userId=${userId}&shift=${selectedShift?.time}&stoppageId=${selectedStoppageId}`
+      );
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Submission Failed',
+        description: result.error || 'An unexpected error occurred.',
+      });
     }
   };
 
@@ -198,7 +234,7 @@ function ShiftAndStoppageSelectionContent() {
               </p>
               <ScrollArea className="h-72 w-full rounded-md border">
                 <RadioGroup
-                  onValueChange={(value) => setSelectedStoppageId(parseInt(value))}
+                  onValue-change={(value) => setSelectedStoppageId(parseInt(value))}
                   value={selectedStoppageId?.toString()}
                   className="p-4"
                 >
@@ -235,9 +271,10 @@ function ShiftAndStoppageSelectionContent() {
         <CardFooter>
           <Button
             onClick={handleContinue}
-            disabled={!selectedShiftId || !selectedStoppageId}
+            disabled={!selectedShiftId || !selectedStoppageId || isSubmitting}
             className="ml-auto w-full md:w-auto"
           >
+            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Submit & Continue
           </Button>
         </CardFooter>
