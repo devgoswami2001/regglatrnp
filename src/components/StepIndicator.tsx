@@ -39,9 +39,9 @@ export function StepIndicator() {
                 className={cn(
                   'flex h-10 w-10 items-center justify-center rounded-full border-2 font-bold transition-all duration-300',
                   index < activeStepIndex
-                    ? 'border-green-500 bg-green-500 text-white'
+                    ? 'border-primary/50 bg-primary text-primary-foreground'
                     : index === activeStepIndex
-                    ? 'scale-110 border-primary bg-primary/10 text-primary'
+                    ? 'scale-110 border-primary bg-primary/10 ring-4 ring-primary/20 text-primary'
                     : 'border-border bg-card text-muted-foreground'
                 )}
               >
@@ -53,7 +53,7 @@ export function StepIndicator() {
               </div>
               <p
                 className={cn(
-                  'mt-2 w-24 text-center text-xs font-medium md:text-sm',
+                  'mt-2 w-24 text-center text-xs font-medium transition-colors duration-300 md:text-sm',
                   index <= activeStepIndex
                     ? 'font-semibold text-foreground'
                     : 'text-muted-foreground'
@@ -66,8 +66,8 @@ export function StepIndicator() {
               <div className="relative mx-2 h-1 flex-1 rounded bg-border">
                 <div
                   className={cn(
-                    'absolute left-0 top-0 h-full rounded transition-all duration-500',
-                    index < activeStepIndex ? 'w-full bg-green-500' : 'w-0'
+                    'absolute left-0 top-0 h-full rounded bg-primary transition-all duration-500',
+                    index < activeStepIndex ? 'w-full' : 'w-0'
                   )}
                 />
               </div>
