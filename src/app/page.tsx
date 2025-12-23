@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -25,11 +25,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { RegistrationLayout } from '@/components/RegistrationLayout';
-import { Loader2, Mail, KeyRound } from 'lucide-react';
-
-const emailSchema = z.object({
-  email: z.string().email('Please enter a valid email address.'),
-});
+import { Loader2, KeyRound } from 'lucide-react';
+import { findUserById } from '@/lib/data';
 
 const otpSchema = z.object({
   otp: z
@@ -38,20 +35,17 @@ const otpSchema = z.object({
     .max(6, 'OTP must be 6 digits.'),
 });
 
-type EmailFormValues = z.infer<typeof emailSchema>;
 type OtpFormValues = z.infer<typeof otpSchema>;
 
 // Mock backend functions
 const sendOtp = async (
   email: string
 ): Promise<{ success: boolean; maskedEmail: string }> => {
+  console.log(`Sending OTP to ${email}`);
   await new Promise(resolve => setTimeout(resolve, 1000));
-  if (email.toLowerCase() === 'user@example.com') {
-    const atIndex = email.indexOf('@');
-    const masked = `${email.substring(0, 1)}***${email.substring(atIndex)}`;
-    return { success: true, maskedEmail: masked };
-  }
-  return { success: false, maskedEmail: '' };
+  const atIndex = email.indexOf('@');
+  const masked = `${email.substring(0, 1)}***${email.substring(atIndex)}`;
+  return { success: true, maskedEmail: masked };
 };
 
 const verifyOtp = async (
@@ -64,26 +58,53 @@ const verifyOtp = async (
   return { success: false };
 };
 
-export default function LoginPage() {
-  const [step, setStep] = useState<'email' | 'otp'>('email');
-  const [isSending, setIsSending] = useState(false);
+function OtpLoginContent() {
+  const [isSending, setIsSending] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
   const [maskedEmail, setMaskedEmail] = useState('');
   const [email, setEmail] = useState('');
+  const [userId, setUserId] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
-
-  const emailForm = useForm<EmailFormValues>({
-    resolver: zodResolver(emailSchema),
-    defaultValues: { email: '' },
-  });
 
   const otpForm = useForm<OtpFormValues>({
     resolver: zodResolver(otpSchema),
     defaultValues: { otp: '' },
   });
+
+  useEffect(() => {
+    const id = searchParams.get('userId');
+    if (!id) {
+      // Maybe show an error or redirect to a 'invalid link' page
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Link',
+        description: 'User ID is missing. Please use the link provided.',
+      });
+      return;
+    }
+    const user = findUserById(id);
+    if (user) {
+      setUserId(id);
+      setEmail(user.email);
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'User Not Found',
+        description: 'No user found for the provided ID.',
+      });
+    }
+  }, [searchParams, toast]);
+
+  useEffect(() => {
+    if (email) {
+      handleSendOtp(email);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [email]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -95,15 +116,17 @@ export default function LoginPage() {
     return () => clearInterval(interval);
   }, [cooldown]);
 
-  const handleSendOtp = async (data: EmailFormValues) => {
+  const handleSendOtp = async (emailToSend: string) => {
     setIsSending(true);
-    setEmail(data.email);
-    const result = await sendOtp(data.email);
+    const result = await sendOtp(emailToSend);
     setIsSending(false);
 
     if (result.success) {
       setMaskedEmail(result.maskedEmail);
-      setStep('otp');
+      toast({
+        title: 'OTP Sent',
+        description: `An OTP has been sent to ${result.maskedEmail}`,
+      });
       setCooldown(30);
     } else {
       toast({
@@ -137,124 +160,113 @@ export default function LoginPage() {
   };
 
   const handleResend = async () => {
-    if (cooldown > 0) return;
-    setIsSending(true);
-    const result = await sendOtp(email);
-    setIsSending(false);
-    if (result.success) {
-      toast({
-        title: 'OTP Resent',
-        description: `A new OTP has been sent to ${maskedEmail}`,
-      });
-      setCooldown(30);
-    }
+    if (cooldown > 0 || !email) return;
+    await handleSendOtp(email);
   };
+  
+  if (!userId) {
+     return (
+       <RegistrationLayout>
+         <Card className="w-full">
+           <CardHeader>
+             <CardTitle>Secure Login</CardTitle>
+             <CardDescription>
+               Please use the unique login link sent to you.
+             </CardDescription>
+           </CardHeader>
+         </Card>
+       </RegistrationLayout>
+     );
+  }
+
+  if (isSending && !maskedEmail) {
+    return (
+      <RegistrationLayout>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center p-12">
+            <Loader2 className="mb-4 h-8 w-8 animate-spin" />
+            <p className="text-muted-foreground">Preparing your secure login...</p>
+          </CardContent>
+        </Card>
+      </RegistrationLayout>
+    );
+  }
 
   return (
     <RegistrationLayout>
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Secure Login</CardTitle>
+          <CardTitle>One-Time Password</CardTitle>
           <CardDescription>
-            {step === 'email'
-              ? 'Enter your registered email to receive a One-Time Password (OTP).'
-              : `An OTP has been sent to ${maskedEmail}. Please enter it below.`}
+            {`An OTP has been sent to ${maskedEmail}. Please enter it below.`}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {step === 'email' ? (
-            <Form {...emailForm}>
-              <form
-                onSubmit={emailForm.handleSubmit(handleSendOtp)}
-                className="space-y-6"
+          <Form {...otpForm}>
+            <form
+              onSubmit={otpForm.handleSubmit(handleVerifyOtp)}
+              className="space-y-6"
+            >
+              <FormField
+                control={otpForm.control}
+                name="otp"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Enter Your OTP</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <KeyRound className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder="· · · · · ·"
+                          {...field}
+                          className="pl-10 text-center text-2xl tracking-[0.5em] font-mono"
+                          maxLength={6}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isVerifying}
               >
-                <FormField
-                  control={emailForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email Address</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                          <Input
-                            placeholder="you@example.com"
-                            {...field}
-                            className="pl-10"
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full" disabled={isSending}>
-                  {isSending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Send OTP
-                </Button>
-              </form>
-            </Form>
-          ) : (
-            <Form {...otpForm}>
-              <form
-                onSubmit={otpForm.handleSubmit(handleVerifyOtp)}
-                className="space-y-6"
-              >
-                <FormField
-                  control={otpForm.control}
-                  name="otp"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>One-Time Password</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <KeyRound className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                          <Input
-                            placeholder="· · · · · ·"
-                            {...field}
-                            className="pl-10 text-center tracking-[0.5em]"
-                            maxLength={6}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isVerifying}
-                >
-                  {isVerifying && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Verify OTP
-                </Button>
-                <div className="text-center text-sm">
-                  {cooldown > 0 ? (
-                    <p className="text-muted-foreground">
-                      Resend OTP in {cooldown}s
-                    </p>
-                  ) : (
-                    <Button
-                      variant="link"
-                      type="button"
-                      onClick={handleResend}
-                      className="h-auto p-0"
-                      disabled={isSending}
-                    >
-                      Didn't receive code? Resend OTP
-                    </Button>
-                  )}
-                </div>
-              </form>
-            </Form>
-          )}
+                {isVerifying && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Verify & Proceed
+              </Button>
+              <div className="text-center text-sm">
+                {cooldown > 0 ? (
+                  <p className="text-muted-foreground">
+                    Resend OTP in {cooldown}s
+                  </p>
+                ) : (
+                  <Button
+                    variant="link"
+                    type="button"
+                    onClick={handleResend}
+                    className="h-auto p-0"
+                    disabled={isSending}
+                  >
+                    Didn't receive the code? Resend OTP
+                  </Button>
+                )}
+              </div>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </RegistrationLayout>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <OtpLoginContent />
+    </Suspense>
   );
 }
