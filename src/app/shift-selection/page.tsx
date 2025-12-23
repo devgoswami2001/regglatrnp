@@ -234,7 +234,7 @@ function ShiftAndStoppageSelectionContent() {
               </p>
               <ScrollArea className="h-72 w-full rounded-md border">
                 <RadioGroup
-                  onValue-change={(value) => setSelectedStoppageId(parseInt(value))}
+                  onValueChange={(value) => setSelectedStoppageId(parseInt(value))}
                   value={selectedStoppageId?.toString()}
                   className="p-4"
                 >
