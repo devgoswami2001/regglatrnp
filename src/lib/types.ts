@@ -6,12 +6,12 @@ export type User = {
   department: string;
 };
 
-export type Shift = 'Morning' | 'Evening' | 'Night';
-
-export const shifts: Shift[] = ['Morning', 'Evening', 'Night'];
+export type Shift = {
+  id: number;
+  time: string;
+};
 
 export type Stoppage = {
-  id: string;
+  id: number;
   name: string;
-  route: string;
 };

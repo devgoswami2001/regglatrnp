@@ -16,7 +16,7 @@ import { redirect } from 'next/navigation';
 interface ConfirmationPageProps {
   searchParams: {
     userId?: string;
-    shift?: Shift;
+    shift?: string;
     stoppageId?: string;
   };
 }
@@ -31,7 +31,7 @@ export default function ConfirmationPage({ searchParams }: ConfirmationPageProps
   const user = findUserById(userId);
   const stoppage = getStoppageById(stoppageId);
 
-  if (!user || !stoppage) {
+  if (!user) {
     redirect('/');
   }
 
@@ -72,7 +72,7 @@ export default function ConfirmationPage({ searchParams }: ConfirmationPageProps
                     Selected Stoppage
                   </p>
                   <p className="font-medium">
-                    {stoppage.name} ({stoppage.route})
+                    {stoppage ? stoppage.name : `ID: ${stoppageId}`}
                   </p>
                 </div>
               </div>

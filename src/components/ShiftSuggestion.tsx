@@ -5,12 +5,10 @@ import { suggestShiftTimings } from '@/ai/flows/suggest-shift-timings';
 import { Button } from '@/components/ui/button';
 import { Loader2, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Shift } from '@/lib/types';
-import { shifts } from '@/lib/types';
 
 interface ShiftSuggestionProps {
   employeeId: string;
-  onSuggestion: (shift: Shift) => void;
+  onSuggestion: (shiftTime: string) => void;
 }
 
 export default function ShiftSuggestion({
@@ -24,12 +22,13 @@ export default function ShiftSuggestion({
     setIsLoading(true);
     try {
       const result = await suggestShiftTimings({ employeeId });
-      const suggestedShift = result.suggestedShift as Shift;
-      if (shifts.includes(suggestedShift)) {
+      const suggestedShift = result.suggestedShift; // This is a string like "Morning", "Evening"
+      
+      if (suggestedShift) {
         onSuggestion(suggestedShift);
         toast({
           title: 'AI Suggestion',
-          description: `We've selected the ${suggestedShift} shift for you based on our analysis.`,
+          description: `We've selected a shift for you based on our analysis.`,
         });
       } else {
         throw new Error('Invalid shift suggestion received.');

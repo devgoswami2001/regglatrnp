@@ -13,9 +13,8 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { RegistrationLayout } from '@/components/RegistrationLayout';
-import { findUserById, getStoppagesByShift } from '@/lib/data';
+import { findUserById } from '@/lib/data';
 import type { User, Shift, Stoppage } from '@/lib/types';
-import { shifts } from '@/lib/types';
 import {
   Clock,
   User as UserIcon,
@@ -30,56 +29,111 @@ import ShiftSuggestion from '@/components/ShiftSuggestion';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
+
+const API_BASE_URL = 'https://glatrnp.in/transport';
+
+async function getMetadata(userId: string): Promise<{ shifts: Shift[], locations: Stoppage[] }> {
+  const response = await fetch(`${API_BASE_URL}/metadata/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ id: userId }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch metadata');
+  }
+  return response.json();
+}
+
 
 function ShiftAndStoppageSelectionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
+  
   const [user, setUser] = useState<User | null>(null);
-  const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
+  const [shifts, setShifts] = useState<Shift[]>([]);
   const [stoppages, setStoppages] = useState<Stoppage[]>([]);
-  const [selectedStoppageId, setSelectedStoppageId] = useState<string | null>(
-    null
-  );
+  const [selectedShiftId, setSelectedShiftId] = useState<number | null>(null);
+  const [selectedStoppageId, setSelectedStoppageId] = useState<number | null>(null);
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const userId = searchParams.get('userId');
-    if (userId) {
-      const foundUser = findUserById(userId);
-      if (foundUser) {
-        setUser(foundUser);
-      } else {
-        router.push('/');
-      }
-    } else {
+    if (!userId) {
+      toast({ variant: 'destructive', title: 'Error', description: 'User ID is missing.' });
       router.push('/');
+      return;
     }
-    setLoading(false);
-  }, [searchParams, router]);
 
-  useEffect(() => {
-    if (selectedShift) {
-      const availableStoppages = getStoppagesByShift(selectedShift);
-      setStoppages(availableStoppages);
-      setSelectedStoppageId(null); // Reset stoppage selection when shift changes
-    } else {
-      setStoppages([]);
+    const foundUser = findUserById(userId);
+    if (!foundUser) {
+      toast({ variant: 'destructive', title: 'Error', description: 'User not found.' });
+      router.push('/');
+      return;
     }
-  }, [selectedShift]);
+    setUser(foundUser);
+
+    const fetchMetadata = async () => {
+      try {
+        setLoading(true);
+        const { shifts: fetchedShifts, locations: fetchedStoppages } = await getMetadata(userId);
+        setShifts(fetchedShifts);
+        setStoppages(fetchedStoppages);
+      } catch (error) {
+        console.error(error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not load shift and stoppage data.' });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMetadata();
+  }, [searchParams, router, toast]);
 
   const handleContinue = () => {
-    if (selectedShift && selectedStoppageId && user) {
-      router.push(
-        `/confirmation?userId=${user.id}&shift=${selectedShift}&stoppageId=${selectedStoppageId}`
-      );
+    if (selectedShiftId && selectedStoppageId && user) {
+       // TODO: Implement submission logic here
+      toast({
+        title: 'Submission In Progress',
+        description: 'Submitting your selection...',
+      });
+      // For now, let's just log it and move to a placeholder confirmation
+      console.log({
+        userId: user.id,
+        shiftId: selectedShiftId,
+        stoppageId: selectedStoppageId,
+      });
+
+      const selectedShift = shifts.find(s => s.id === selectedShiftId);
+      
+       router.push(
+         `/confirmation?userId=${user.id}&shift=${selectedShift?.time}&stoppageId=${selectedStoppageId}`
+       );
     }
   };
+
+  const handleShiftSelection = (shiftId: number) => {
+    setSelectedShiftId(shiftId);
+    // In the new API, stoppages are not dependent on shifts, so no need to filter.
+  }
+  
+  const handleSuggestion = (suggestion: string) => {
+    const matchedShift = shifts.find(s => s.time.includes(suggestion));
+    if (matchedShift) {
+        setSelectedShiftId(matchedShift.id);
+    }
+  }
 
   if (loading || !user) {
     return (
       <RegistrationLayout>
         <div className="flex h-64 items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="ml-4 text-muted-foreground">Loading your details...</p>
         </div>
       </RegistrationLayout>
     );
@@ -129,77 +183,73 @@ function ShiftAndStoppageSelectionContent() {
               {user.enrollmentId && (
                 <ShiftSuggestion
                   employeeId={user.enrollmentId}
-                  onSuggestion={setSelectedShift}
+                  onSuggestion={handleSuggestion}
                 />
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              Only one shift can be selected. This will determine available
-              stoppages.
+              Only one shift can be selected.
             </p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+             <RadioGroup
+              onValueChange={(value) => handleShiftSelection(parseInt(value))}
+              value={selectedShiftId?.toString()}
+              className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+            >
               {shifts.map(shift => (
-                <button
-                  key={shift}
-                  onClick={() => setSelectedShift(shift)}
-                  className={cn(
-                    'flex flex-col items-center justify-center rounded-lg border-2 p-6 text-center transition-all duration-200',
-                    selectedShift === shift
-                      ? 'scale-105 border-primary bg-primary/10 shadow-lg'
-                      : 'border-border hover:border-primary/50 hover:bg-accent'
-                  )}
-                >
-                  <Clock className="mb-2 h-8 w-8" />
-                  <span className="font-semibold">{shift}</span>
-                </button>
+                 <Label
+                    key={shift.id}
+                    htmlFor={`shift-${shift.id}`}
+                    className={cn(
+                      'flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 p-6 text-center transition-all duration-200',
+                       selectedShiftId === shift.id
+                        ? 'scale-105 border-primary bg-primary/10 shadow-lg'
+                        : 'border-border hover:border-primary/50 hover:bg-accent'
+                    )}
+                  >
+                    <RadioGroupItem value={shift.id.toString()} id={`shift-${shift.id}`} className="sr-only" />
+                    <Clock className="mb-2 h-8 w-8" />
+                    <span className="font-semibold">{shift.time}</span>
+                  </Label>
               ))}
-            </div>
+            </RadioGroup>
           </div>
 
           {/* Stoppage Selection */}
-          {selectedShift && (
+          {shifts.length > 0 && (
             <div className="space-y-4">
               <h3 className="font-semibold">2. Select Your Stoppage</h3>
               <p className="text-sm text-muted-foreground">
-                Available stoppages for the{' '}
-                <span className="font-semibold text-primary">
-                  {selectedShift}
-                </span>{' '}
-                shift.
+                Please select your desired pickup location.
               </p>
               <ScrollArea className="h-72 w-full rounded-md border">
                 <RadioGroup
-                  onValueChange={setSelectedStoppageId}
-                  value={selectedStoppageId || ''}
+                  onValueChange={(value) => setSelectedStoppageId(parseInt(value))}
+                  value={selectedStoppageId?.toString()}
                   className="p-4"
                 >
                   {stoppages.length > 0 ? (
                     stoppages.map(stoppage => (
                       <Label
                         key={stoppage.id}
-                        htmlFor={stoppage.id}
+                        htmlFor={`stoppage-${stoppage.id}`}
                         className={cn(
                           'flex cursor-pointer items-center gap-4 rounded-md border p-4 transition-colors hover:bg-accent/50',
                           selectedStoppageId === stoppage.id &&
                             'border-primary bg-primary/10'
                         )}
                       >
-                        <RadioGroupItem value={stoppage.id} id={stoppage.id} />
+                        <RadioGroupItem value={stoppage.id.toString()} id={`stoppage-${stoppage.id}`} />
                         <div className="flex-1">
                           <div className="flex items-center gap-2 font-semibold">
                             <MapPin className="h-4 w-4 text-primary" />
                             {stoppage.name}
-                          </div>
-                          <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                            <BusFront className="h-3 w-3" />
-                            {stoppage.route}
                           </div>
                         </div>
                       </Label>
                     ))
                   ) : (
                     <div className="flex h-full items-center justify-center p-4 text-sm text-muted-foreground">
-                      No stoppages available for this shift.
+                      No stoppages available.
                     </div>
                   )}
                 </RadioGroup>
@@ -210,10 +260,10 @@ function ShiftAndStoppageSelectionContent() {
         <CardFooter>
           <Button
             onClick={handleContinue}
-            disabled={!selectedStoppageId}
+            disabled={!selectedShiftId || !selectedStoppageId}
             className="ml-auto w-full md:w-auto"
           >
-            Confirm & Continue
+            Submit & Continue
           </Button>
         </CardFooter>
       </Card>
