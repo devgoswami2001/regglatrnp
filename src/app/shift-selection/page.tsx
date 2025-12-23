@@ -23,7 +23,6 @@ import {
   MapPin,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import ShiftSuggestion from '@/components/ShiftSuggestion';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -112,13 +111,6 @@ function ShiftAndStoppageSelectionContent() {
     setSelectedShiftId(shiftId);
   }
   
-  const handleSuggestion = (suggestion: string) => {
-    const matchedShift = shifts.find(s => s.time.toLowerCase().includes(suggestion.toLowerCase()));
-    if (matchedShift) {
-        setSelectedShiftId(matchedShift.id);
-    }
-  }
-
   if (loading || !user) {
     return (
       <RegistrationLayout>
@@ -169,15 +161,7 @@ function ShiftAndStoppageSelectionContent() {
 
           {/* Shift Selection */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">1. Select Your Shift</h3>
-              {user.employee_id && (
-                <ShiftSuggestion
-                  employeeId={user.employee_id}
-                  onSuggestion={handleSuggestion}
-                />
-              )}
-            </div>
+            <h3 className="font-semibold">1. Select Your Shift</h3>
             <p className="text-sm text-muted-foreground">
               Only one shift can be selected.
             </p>
