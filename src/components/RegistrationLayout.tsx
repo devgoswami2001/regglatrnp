@@ -7,11 +7,14 @@ export function RegistrationLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-dvh w-full flex-col items-center bg-background p-4 sm:p-6 lg:p-8">
+    <div className="flex min-h-dvh w-full flex-col items-center bg-background p-4 pt-8 sm:p-6 sm:pt-12 lg:p-8 lg:pt-16">
       <div className="flex w-full max-w-4xl flex-col items-center">
-        <header className="mb-8 flex flex-col items-center text-center">
+        <header className="mb-12 flex flex-col items-center text-center">
           <Logo />
-          <p className="mt-4 text-lg font-medium tracking-wide text-muted-foreground">
+          <h2 className="mt-4 text-xl font-semibold text-foreground/80">
+            Transport Department
+          </h2>
+          <p className="mt-2 text-base tracking-wide text-muted-foreground">
             One Shift • One Route • One Bus • One Seat
           </p>
         </header>
