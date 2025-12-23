@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
 
 const steps = [
-  { path: '/', name: 'OTP Verification' },
+  { path: '/register', name: 'OTP Verification' },
   { path: '/shift-selection', name: 'Shift & Stoppage' },
   { path: '/confirmation', name: 'Confirmation' },
 ];
@@ -13,30 +13,19 @@ const steps = [
 export function StepIndicator() {
   const pathname = usePathname();
   
-  // Find the index of the current step based on the path
-  let activeStepIndex = steps.findIndex(step => pathname.startsWith(step.path) && step.path !== '/');
+  let activeStepIndex = steps.findIndex(step => pathname.startsWith(step.path));
+
   if (pathname === '/') {
     activeStepIndex = 0;
   }
-  // For paths that might not be explicitly listed but belong to a step (like stoppage selection)
-  if (pathname.startsWith('/stoppage-selection')) {
-    activeStepIndex = 1;
-  }
-   if (pathname.startsWith('/confirmation')) {
+  
+  if (pathname.startsWith('/confirmation')) {
     activeStepIndex = 2;
   }
 
-
-  if (activeStepIndex === -1 && pathname !== '/') {
-     const lastActiveStep = [...steps].reverse().find(step => pathname.startsWith(step.path));
-     if(lastActiveStep) {
-        activeStepIndex = steps.indexOf(lastActiveStep);
-     }
-  }
-  if (activeStepIndex === -1 && pathname === '/') {
+  if (activeStepIndex === -1 && pathname.startsWith('/register')) {
     activeStepIndex = 0;
   }
-
 
   if (activeStepIndex === -1) return null;
 
