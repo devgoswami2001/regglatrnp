@@ -30,19 +30,19 @@ export function StepIndicator() {
   if (activeStepIndex === -1) return null;
 
   return (
-    <div className="mb-12 w-full max-w-2xl">
+    <div className="w-full max-w-md">
       <div className="flex items-start">
         {steps.map((step, index) => (
           <div key={step.name} className="flex w-full items-center">
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center text-center">
               <div
                 className={cn(
-                  'flex h-10 w-10 items-center justify-center rounded-full font-bold transition-all duration-300',
+                  'flex h-10 w-10 items-center justify-center rounded-full border-2 font-bold transition-all duration-300',
                   index < activeStepIndex
-                    ? 'bg-primary text-primary-foreground'
+                    ? 'border-green-500 bg-green-500 text-white'
                     : index === activeStepIndex
-                    ? 'scale-110 border-2 border-primary bg-primary/10 text-primary'
-                    : 'border bg-card text-muted-foreground'
+                    ? 'scale-110 border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-card text-muted-foreground'
                 )}
               >
                 {index < activeStepIndex ? (
@@ -53,7 +53,7 @@ export function StepIndicator() {
               </div>
               <p
                 className={cn(
-                  'mt-2 w-24 text-center text-xs md:text-sm',
+                  'mt-2 w-24 text-center text-xs font-medium md:text-sm',
                   index <= activeStepIndex
                     ? 'font-semibold text-foreground'
                     : 'text-muted-foreground'
@@ -63,12 +63,14 @@ export function StepIndicator() {
               </p>
             </div>
             {index < steps.length - 1 && (
-              <div
-                className={cn(
-                  'mx-2 h-1 flex-1 rounded',
-                  index < activeStepIndex ? 'bg-primary' : 'bg-border'
-                )}
-              />
+              <div className="relative mx-2 h-1 flex-1 rounded bg-border">
+                <div
+                  className={cn(
+                    'absolute left-0 top-0 h-full rounded transition-all duration-500',
+                    index < activeStepIndex ? 'w-full bg-green-500' : 'w-0'
+                  )}
+                />
+              </div>
             )}
           </div>
         ))}
