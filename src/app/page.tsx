@@ -125,7 +125,7 @@ function OtpLoginContent() {
       setMaskedEmail(result.maskedEmail);
       toast({
         title: 'OTP Sent',
-        description: `An OTP has been sent to ${result.maskedEmail}`,
+        description: `A 6-digit OTP has been sent to ${result.maskedEmail}`,
       });
       setCooldown(30);
     } else {
@@ -196,9 +196,9 @@ function OtpLoginContent() {
     <RegistrationLayout>
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>One-Time Password</CardTitle>
+          <CardTitle>Enter Your OTP</CardTitle>
           <CardDescription>
-            {`An OTP has been sent to ${maskedEmail}. Please enter it below.`}
+            {`A 6-digit OTP has been sent to ${maskedEmail}.`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -212,7 +212,7 @@ function OtpLoginContent() {
                 name="otp"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Enter Your OTP</FormLabel>
+                    <FormLabel>6-Digit OTP</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <KeyRound className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
