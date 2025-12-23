@@ -119,8 +119,6 @@ function ShiftAndStoppageSelectionContent() {
 
     const result = await submitSelection(userId, selectedShiftId, selectedStoppageId);
 
-    setIsSubmitting(false);
-
     if (result.success) {
       toast({
         title: 'Success!',
@@ -131,6 +129,7 @@ function ShiftAndStoppageSelectionContent() {
         `/confirmation?userId=${userId}&shift=${encodeURIComponent(selectedShift?.time || '')}&stoppageId=${selectedStoppageId}`
       );
     } else {
+      setIsSubmitting(false);
       toast({
         variant: 'destructive',
         title: 'Submission Failed',
