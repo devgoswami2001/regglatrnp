@@ -21,7 +21,7 @@ export function RegistrationLayout({
           </div>
         </header>
 
-        <div className="mb-8 flex w-full justify-center px-4 md:px-10">
+        <div className="mb-8 flex w-full justify-center">
           <StepIndicator />
         </div>
 
