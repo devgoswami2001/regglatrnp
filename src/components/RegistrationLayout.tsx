@@ -1,5 +1,6 @@
 import { StepIndicator } from '@/components/StepIndicator';
 import Logo from '@/components/Logo';
+import Image from 'next/image';
 
 export function RegistrationLayout({
   children,
@@ -20,11 +21,21 @@ export function RegistrationLayout({
               opacity: 0.5,
             }}
           />
+          
+          {/* Logo image with lg:w-32 (14rem/224px) and no shadows */}
+          <div className="mx-auto mb-4 w-24 h-24 sm:w-28 sm:h-28 lg:w-80 lg:h-32">
+            <Image
+              src="/gla_logo.png"
+              alt="Transport Department"
+              width={224}  // 14rem = 224px for lg breakpoint
+              height={224}
+              className="h-full w-full object-contain rounded-xl"
+              priority
+            />
+          </div>
+          
           <Logo className="justify-center" />
           <div className="mt-4 space-y-1">
-            <h2 className="text-xl font-semibold text-foreground/90">
-              Transport Department
-            </h2>
             <p className="text-sm tracking-wide text-muted-foreground">
               One Shift • One Route • One Bus • One Seat
             </p>

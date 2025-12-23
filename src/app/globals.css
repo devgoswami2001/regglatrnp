@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%; /* Light Blue White */
-    --foreground: 215 25% 27%; /* Dark Slate Blue */
+    --background: 120 60% 97%; /* Very Light Mint Green */
+    --foreground: 120 25% 25%; /* Dark Forest Green */
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 27%;
+    --card-foreground: 120 25% 25%;
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 27%;
-    --primary: 217 91% 60%; /* Vibrant Blue */
+    --popover-foreground: 120 25% 25%;
+    --primary: 130 55% 45%; /* Vibrant Kelly Green */
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 90%; /* Soft Powder Blue */
-    --secondary-foreground: 215 25% 27%;
-    --muted: 210 40% 96.1%; /* Lighter Powder Blue */
-    --muted-foreground: 215 20% 65%;
-    --accent: 210 40% 94%; /* Pale Blue */
-    --accent-foreground: 215 25% 27%;
+    --secondary: 120 30% 92%; /* Soft Sage Green */
+    --secondary-foreground: 120 25% 25%;
+    --muted: 120 30% 96%; /* Lighter Sage Green */
+    --muted-foreground: 120 15% 60%;
+    --accent: 120 40% 94%; /* Pale Mint Green */
+    --accent-foreground: 120 25% 25%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 210 40% 90%; /* Light Blue Border */
+    --border: 120 30% 90%; /* Light Green Border */
     --input: 0 0% 100%;
-    --ring: 217 91% 60%;
+    --ring: 130 55% 45%;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
