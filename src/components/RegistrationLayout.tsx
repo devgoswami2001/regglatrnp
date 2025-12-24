@@ -23,7 +23,7 @@ export function RegistrationLayout({
           />
           
           {/* Logo image with lg:w-32 (14rem/224px) and no shadows */}
-          <div className="mx-auto mb-4 w-24 h-24 sm:w-28 sm:h-28 lg:w-80 lg:h-32">
+          <div className="mx-auto mb-4 w-30 h-24 sm:w-28 sm:h-28 lg:w-80 lg:h-32">
             <Image
               src="/gla_logo.png"
               alt="Transport Department"
